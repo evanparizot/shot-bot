@@ -1,0 +1,23 @@
+[package]
+name = "shot-bot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dotenv = "0.15"
+tracing = "0.1.30"
+tracing-subscriber = "0.3.8"
+
+[dependencies.tokio]
+version = "1.16.1"
+features = ["macros", "signal", "rt-multi-thread"]
+
+[dependencies.serenity]
+features = ["cache", "framework", "standard_framework", "rustls_backend", "voice"]
+version = "0.11.2"
+
+[dependencies.chrono]
+version = "0.4.19"
+features = ["clock"]
