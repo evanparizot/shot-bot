@@ -1,13 +1,9 @@
-use std::sync::atomic::Ordering;
-
 use serenity::{
     async_trait,
     client::{Context, EventHandler},
     model::{channel::Message, event::ResumedEvent, prelude::Ready},
 };
 use tracing::info;
-
-use crate::hooks::counter::MessageCount;
 
 pub struct Handler;
 
