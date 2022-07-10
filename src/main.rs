@@ -11,8 +11,8 @@ use hooks::{counter, counter::{MessageCount, CommandCounter}};
 use handler::Handler;
 use serenity::{
     client::bridge::gateway::ShardManager,
-    framework::{StandardFramework},
-    prelude::*,
+    framework::{StandardFramework, standard::{Args, HelpOptions, CommandResult, help_commands, CommandGroup, macros::help}},
+    prelude::*, model::{channel::Message, id::UserId},
 };
 use tracing::{error};
 
@@ -28,6 +28,19 @@ impl TypeMapKey for ShardManagerContainer {
     type Value = Arc<Mutex<ShardManager>>;
 }
 
+#[help]
+async fn my_help(
+    context: &Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
+    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
      let token = env::var("SHOT_BOT_TOKEN").expect("Expected a token in the environment");
@@ -37,7 +50,8 @@ async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("!"))
         .before(counter::before)
-        .group(&SHOTS_GROUP);
+        .group(&SHOTS_GROUP)
+        .help(&MY_HELP);
 
     let intents = GatewayIntents::MESSAGE_CONTENT | GatewayIntents::non_privileged(); 
 
