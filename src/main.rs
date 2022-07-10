@@ -1,19 +1,26 @@
 mod commands;
 mod hooks;
 mod handler;
+mod adapters;
 
 use std::{collections::{HashSet, HashMap}, env, sync::{Arc, atomic::{AtomicUsize}}};
+use adapters::db::ShotSaver;
+use aws_config::meta::region::RegionProviderChain;
 use commands::{shots::*};
 use hooks::{counter, counter::{MessageCount, CommandCounter}};
 use handler::Handler;
 use serenity::{
     client::bridge::gateway::ShardManager,
     framework::{StandardFramework},
-    http::Http,
     prelude::*,
 };
 use tracing::{error};
 
+pub struct AdapterContainer;
+
+impl TypeMapKey for AdapterContainer {
+    type Value = ShotSaver;
+}
 
 pub struct ShardManagerContainer;
 
@@ -27,26 +34,17 @@ async fn main() {
 
     tracing_subscriber::fmt::init();
 
-    // let http = Http::new(&token);
-
-    // let (owners, _bot_id) = match http.get_current_application_info().await {
-    //     Ok(info) => {
-    //         let mut owners = HashSet::new();
-    //         owners.insert(info.owner.id);
-
-    //         (owners, info.id)
-    //     }
-    //     Err(why) => panic!("Could not access application info: {:?}", why),
-    // };
-
     let framework = StandardFramework::new()
         .configure(|c| c.prefix("!"))
-        // .configure(|c| c.with_whitespace(false).prefix("!"))
-        // .configure(|c| c.owners(owners).prefix("!"))
-        // .before(counter::before)
+        .before(counter::before)
         .group(&SHOTS_GROUP);
 
-    let intents = GatewayIntents::DIRECT_MESSAGES;
+    let intents = GatewayIntents::MESSAGE_CONTENT | GatewayIntents::non_privileged(); 
+
+    let region_provider = RegionProviderChain::default_provider().or_else("us-east-2");
+    let config = aws_config::from_env().region(region_provider).load().await;
+    let ddb_client = aws_sdk_dynamodb::Client::new(&config);
+    let shot_saver = ShotSaver::new(ddb_client);
 
     let mut client = Client::builder(&token, intents)
         .framework(framework)
@@ -59,6 +57,7 @@ async fn main() {
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
         data.insert::<CommandCounter>(Arc::new(RwLock::new(HashMap::default())));
         data.insert::<MessageCount>(Arc::new(AtomicUsize::new(0)));
+        data.insert::<AdapterContainer>(shot_saver);
     }
 
     let shard_manager = client.shard_manager.clone();

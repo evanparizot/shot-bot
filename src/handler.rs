@@ -1,10 +1,13 @@
 use std::sync::atomic::Ordering;
 
-use serenity::{async_trait, client::{EventHandler, Context}, model::{channel::Message, event::ResumedEvent, prelude::Ready}};
+use serenity::{
+    async_trait,
+    client::{Context, EventHandler},
+    model::{channel::Message, event::ResumedEvent, prelude::Ready},
+};
 use tracing::info;
 
 use crate::hooks::counter::MessageCount;
-
 
 pub struct Handler;
 
@@ -15,15 +18,15 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
-        if message.content.to_lowercase().contains("owo") {
-            let count = {
-                let data_read = ctx.data.read().await;
-                data_read.get::<MessageCount>().expect("bal").clone()
-            };
-            count.fetch_add(1, Ordering::SeqCst);
-        }
-
-
+        // if message.content.to_lowercase().contains("owo") {
+        //     let count = {
+        //         let data_read = ctx.data.read().await;
+        //         data_read.get::<MessageCount>().expect("bal").clone()
+        //     };
+        //     count.fetch_add(1, Ordering::SeqCst);
+        // }
+        info!("{}", message.author);
+        info!("{}", message.content);
         info!("{}", message.id);
     }
 

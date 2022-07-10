@@ -1,4 +1,5 @@
 use serenity::{framework::standard::macros::hook, prelude::TypeMapKey, client::Context, model::channel::Message};
+use tracing::info;
 use std::{collections::{HashMap}, sync::{Arc, atomic::AtomicUsize}};
 use tokio::sync::RwLock;
 
