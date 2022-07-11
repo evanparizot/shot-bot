@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::AdapterContainer;
+use crate::adapters::db::ShotSaver;
 use rand::Rng;
 use serenity::client::Context;
 use serenity::framework::standard::macros::group;
@@ -10,7 +11,7 @@ use tracing::log::warn;
 use tracing::{error, info};
 
 #[group]
-#[commands(give, take, leaderboard, ponyup, remove)]
+#[commands(give, take, leaderboard, ponyup, remove, social)]
 pub struct Shots;
 
 #[command]
@@ -66,16 +67,13 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
 async fn take(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let shot_saver = data.get::<AdapterContainer>().unwrap();
-    let existing_shots = shot_saver.list().await;
-    let names: HashSet<String> = existing_shots.keys().cloned().collect();
-
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
 
-    if !names.contains(&name.to_string()) {
+    if !shot_saver.exists(name).await {
         let _msg = msg.channel_id.send_message(&ctx.http, |m| {
             m.embed(|e| e.description(format!("{} isn't on the board...yet. Nothing to take.", name)))
         }).await;
-        warn!("Tried to take shots away from {} but they don't exist yet", name);
+        warn!("Tried to take shots away from {} but they don't exist...yet", name);
         return Ok(())
     }
 
@@ -145,16 +143,47 @@ async fn ponyup(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[usage("[USER]")]
+#[description("Removes user entirely from the history")]
 async fn remove(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild_members_map = ctx
-        .cache
-        .guild_field(msg.guild_id.unwrap(), |guild| guild.members.to_owned())
-        .unwrap();
-    let members: HashSet<String> = guild_members_map
-        .values()
-        .map(|v| v.user.name.clone())
-        .collect();
-    info!("{:?}", members);
+    let data = ctx.data.read().await;
+    let shot_saver = data.get::<AdapterContainer>().unwrap();
+    let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
+    if !shot_saver.exists(name).await {
+        let message = format!("{} doesn't exist. Removing nothing", name);
+
+        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
+            m.embed(|e| e.description(&message))
+        }).await;
+        warn!("{}", &message);
+        return Ok(())
+    }
+    
+    let _res = shot_saver.remove(name).await;
+    let _msg = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| e.description(format!("{} was removed from history!", name)))
+    }).await;
+
+    Ok(())
+}
+
+#[command]
+async fn social(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let shot_saver: &ShotSaver = data.get::<AdapterContainer>().unwrap();
+    
+    let members = shot_saver.list().await.keys().cloned().collect::<Vec<String>>();
+    for m in members {
+        let _ = shot_saver.add(&m, 1).await;
+    }
+    let emoji = shot_emoji();
+    let _ = msg.channel_id.send_message(&ctx.http, |m| {
+         m.content(format!(
+                "{} Social! Everyone got a drink! {}",
+                emoji, emoji
+            ))
+    }).await;
+
     Ok(())
 }
 
