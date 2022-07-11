@@ -64,12 +64,20 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
 #[usage("[USER]")]
 #[description("Removes a shot from the provided user")]
 async fn take(ctx: &Context, msg: &Message) -> CommandResult {
-    info!("take");
-
     let data = ctx.data.read().await;
     let shot_saver = data.get::<AdapterContainer>().unwrap();
+    let existing_shots = shot_saver.list().await;
+    let names: HashSet<String> = existing_shots.keys().cloned().collect();
 
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
+
+    if !names.contains(&name.to_string()) {
+        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
+            m.embed(|e| e.description(format!("{} isn't on the board...yet. Nothing to take.", name)))
+        }).await;
+        warn!("Tried to take shots away from {} but they don't exist yet", name);
+        return Ok(())
+    }
 
     let shots_left = match shot_saver.subtract(name, 1).await {
         Ok(_a) => _a,
