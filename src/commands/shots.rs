@@ -25,6 +25,7 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
         .unwrap();
     let members: HashSet<String> = guild_members_map
         .values()
+        .filter(|v| !v.user.bot)
         .map(|v| v.user.name.clone())
         .collect();
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
