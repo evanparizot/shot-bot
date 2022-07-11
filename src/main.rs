@@ -10,9 +10,9 @@ use commands::{shots::*};
 use hooks::{counter, counter::{MessageCount, CommandCounter}};
 use handler::Handler;
 use serenity::{
-    client::bridge::gateway::ShardManager,
+    client::{bridge::gateway::ShardManager, Cache},
     framework::{StandardFramework, standard::{Args, HelpOptions, CommandResult, help_commands, CommandGroup, macros::help}},
-    prelude::*, model::{channel::Message, id::UserId},
+    prelude::*, model::{channel::Message, id::UserId}, cache::Settings,
 };
 use tracing::{error};
 
@@ -53,7 +53,12 @@ async fn main() {
         .group(&SHOTS_GROUP)
         .help(&MY_HELP);
 
-    let intents = GatewayIntents::MESSAGE_CONTENT | GatewayIntents::non_privileged(); 
+    let intents = GatewayIntents::MESSAGE_CONTENT 
+        | GatewayIntents::non_privileged()
+        | GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MEMBERS
+        | GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::GUILD_PRESENCES;
 
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-2");
     let config = aws_config::from_env().region(region_provider).load().await;

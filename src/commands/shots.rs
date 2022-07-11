@@ -1,13 +1,16 @@
+use std::collections::HashSet;
+
 use crate::AdapterContainer;
 use rand::Rng;
 use serenity::client::Context;
 use serenity::framework::standard::macros::group;
 use serenity::framework::standard::{macros::command, CommandResult};
 use serenity::model::channel::Message;
+use tracing::log::warn;
 use tracing::{error, info};
 
 #[group]
-#[commands(give, take, leaderboard, ponyup)]
+#[commands(give, take, leaderboard, ponyup, remove)]
 pub struct Shots;
 
 #[command]
@@ -16,8 +19,27 @@ pub struct Shots;
 async fn give(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let shot_saver = data.get::<AdapterContainer>().unwrap();
-
+    let guild_members_map = ctx
+        .cache
+        .guild_field(msg.guild_id.unwrap(), |guild| guild.members.to_owned())
+        .unwrap();
+    let members: HashSet<String> = guild_members_map
+        .values()
+        .map(|v| v.user.name.clone())
+        .collect();
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
+    let author = msg.author.name.clone(); 
+
+    info!("Members: {:?}", members);
+    if !members.contains(&name.to_string()) {
+        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
+            m.embed(|e| e.description(format!("Dumbass, {} doesn't exist in this server. No shots given.", name)))
+        }).await;
+
+        warn!("{} tried to give {} a shot, but it failed", author, name);
+        return Ok(());
+    }
+
     let to_take = match shot_saver.add(name, 1).await {
         Ok(a) => a,
         Err(_) => -1,
@@ -110,6 +132,20 @@ async fn ponyup(ctx: &Context, msg: &Message) -> CommandResult {
         Err(()) => error!("Something went wrong"),
     };
 
+    Ok(())
+}
+
+#[command]
+async fn remove(ctx: &Context, msg: &Message) -> CommandResult {
+    let guild_members_map = ctx
+        .cache
+        .guild_field(msg.guild_id.unwrap(), |guild| guild.members.to_owned())
+        .unwrap();
+    let members: HashSet<String> = guild_members_map
+        .values()
+        .map(|v| v.user.name.clone())
+        .collect();
+    info!("{:?}", members);
     Ok(())
 }
 
