@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::AdapterContainer;
 use crate::adapters::db::ShotSaver;
+use crate::AdapterContainer;
 use rand::Rng;
 use serenity::client::Context;
 use serenity::framework::standard::macros::group;
@@ -30,13 +30,21 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
         .map(|v| v.user.name.clone())
         .collect();
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
-    let author = msg.author.name.clone(); 
+    let author = msg.author.name.clone();
 
     info!("Members: {:?}", members);
     if !members.contains(&name.to_string()) {
-        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-            m.embed(|e| e.description(format!("Dumbass, {} doesn't exist in this server. No shots given.", name)))
-        }).await;
+        let _msg = msg
+            .channel_id
+            .send_message(&ctx.http, |m| {
+                m.embed(|e| {
+                    e.description(format!(
+                        "Dumbass, {} doesn't exist in this server. No shots given.",
+                        name
+                    ))
+                })
+            })
+            .await;
 
         warn!("{} tried to give {} a shot, but it failed", author, name);
         return Ok(());
@@ -70,11 +78,22 @@ async fn take(ctx: &Context, msg: &Message) -> CommandResult {
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
 
     if !shot_saver.exists(name).await {
-        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-            m.embed(|e| e.description(format!("{} isn't on the board...yet. Nothing to take.", name)))
-        }).await;
-        warn!("Tried to take shots away from {} but they don't exist...yet", name);
-        return Ok(())
+        let _msg = msg
+            .channel_id
+            .send_message(&ctx.http, |m| {
+                m.embed(|e| {
+                    e.description(format!(
+                        "{} isn't on the board...yet. Nothing to take.",
+                        name
+                    ))
+                })
+            })
+            .await;
+        warn!(
+            "Tried to take shots away from {} but they don't exist...yet",
+            name
+        );
+        return Ok(());
     }
 
     let shots_left = match shot_saver.subtract(name, 1).await {
@@ -152,17 +171,21 @@ async fn remove(ctx: &Context, msg: &Message) -> CommandResult {
     if !shot_saver.exists(name).await {
         let message = format!("{} doesn't exist. Removing nothing", name);
 
-        let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-            m.embed(|e| e.description(&message))
-        }).await;
+        let _msg = msg
+            .channel_id
+            .send_message(&ctx.http, |m| m.embed(|e| e.description(&message)))
+            .await;
         warn!("{}", &message);
-        return Ok(())
+        return Ok(());
     }
-    
+
     let _res = shot_saver.remove(name).await;
-    let _msg = msg.channel_id.send_message(&ctx.http, |m| {
-        m.embed(|e| e.description(format!("{} was removed from history!", name)))
-    }).await;
+    let _msg = msg
+        .channel_id
+        .send_message(&ctx.http, |m| {
+            m.embed(|e| e.description(format!("{} was removed from history!", name)))
+        })
+        .await;
 
     Ok(())
 }
@@ -171,18 +194,23 @@ async fn remove(ctx: &Context, msg: &Message) -> CommandResult {
 async fn social(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let shot_saver: &ShotSaver = data.get::<AdapterContainer>().unwrap();
-    
-    let members = shot_saver.list().await.keys().cloned().collect::<Vec<String>>();
+
+    let members = shot_saver
+        .list()
+        .await
+        .keys()
+        .cloned()
+        .collect::<Vec<String>>();
     for m in members {
         let _ = shot_saver.add(&m, 1).await;
     }
     let emoji = shot_emoji();
-    let _ = msg.channel_id.send_message(&ctx.http, |m| {
-         m.content(format!(
-                "{} Social! Everyone got a drink! {}",
-                emoji, emoji
-            ))
-    }).await;
+    let _ = msg
+        .channel_id
+        .send_message(&ctx.http, |m| {
+            m.content(format!("{} Social! Everyone got a drink! {}", emoji, emoji))
+        })
+        .await;
 
     Ok(())
 }
