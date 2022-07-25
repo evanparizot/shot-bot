@@ -75,7 +75,7 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
 async fn take(ctx: &Context, msg: &Message) -> CommandResult {
     let data = ctx.data.read().await;
     let shot_saver = data.get::<AdapterContainer>().unwrap();
-    let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
+    let name: &str = &msg.author.name;
 
     if !shot_saver.exists(name).await {
         let _msg = msg
