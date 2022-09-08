@@ -1,14 +1,9 @@
 # shot-bot
 
-
-## Deploy Manually
-1. Start docker. Run `aws-build al2`
-2. Change to `/shot-bot/target`
-3. Run the following (kill process on host first)
-
-``` bash
-scp -i ~/shot-bot.pem latest-al2 ec2-user@ec2-3-17-156-95.us-east-2.compute.amazonaws.com:/home/ec2-user/
-```
-
-4. SSH to host
-5. Run `nohup ./latest-al2 &`
+1. Deploy by running `./deploy`
+1. Service file is at `/lib/systemd/system/shot-bot.service`
+1. Reload with `sudo systemctl daemon-reload`
+1. Enable with `sudo systemctl enable shot-bot.service`
+1. Start with `sudo systemctl start shot-bot.service`
+1. Check status with `sudo systemctl status shot-bot.service`
+1. Check logs with `journalctl --unit=shot-bot.service`
