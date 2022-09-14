@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use crate::adapters::db::ShotSaver;
 use crate::AdapterContainer;
@@ -11,7 +11,7 @@ use tracing::log::warn;
 use tracing::{error, info};
 
 #[group]
-#[commands(give, take, leaderboard, ponyup, remove, social)]
+#[commands(give, take, leaderboard, ponyup, remove, social, aliases)]
 pub struct Shots;
 
 #[command]
@@ -31,6 +31,8 @@ async fn give(ctx: &Context, msg: &Message) -> CommandResult {
         .collect();
     let name: &str = msg.content.split(" ").collect::<Vec<&str>>()[1];
     let author = msg.author.name.clone();
+
+    let name = &check_alias(name).unwrap_or_else(|| name.to_string()); 
 
     info!("Members: {:?}", members);
     if !members.contains(&name.to_string()) {
@@ -215,9 +217,38 @@ async fn social(ctx: &Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+#[command]
+async fn aliases(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.send_message(&ctx.http, |m| {
+        m.embed(|e| {
+            e.title("Aliases");
+            let aliases = get_aliases().iter()
+                .map(|(k, v)| format!("{} = {}", k, v))
+                .collect::<Vec<String>>();
+            e.description(aliases.join("\n"))
+        })
+    }).await;
+
+    Ok(())
+}
+
 fn shot_emoji() -> &'static str {
     let emojis = vec!["🍷", "🍸", "🍹", "🍺", "🍻", "🥂", "🥃"];
     let mut rng = rand::thread_rng();
     let emoji = emojis.get(rng.gen_range(0..emojis.len())).unwrap();
     emoji
+}
+
+fn get_aliases<'a>() -> HashMap<&'a str, &'a str> {
+    HashMap::from([
+        ("will", "AuntBiotic"),
+        ("john", "John"),
+        ("adrian", "adpangelinan"),
+        ("max", "maxstir"),
+        ("kyle", "kylemckelv16")
+    ])
+}
+
+fn check_alias(input: &str) -> Option<String> {
+    get_aliases().get(input).map(|a| String::from(a.clone()))
 }
